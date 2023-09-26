@@ -1,55 +1,42 @@
 import express from "express";
 import { nanoid } from "nanoid";
 import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const db = [
+dotenv.config();
+const conn = mongoose.createConnection(process.env.MONGO_URI);
+
+const SnippetSchema = new mongoose.Schema(
   {
-    id: "DBCC2857",
-    title: "untitled",
-    createdAt: Date.now(),
-    modifiedAt: Date.now(),
-    content: `ReferenceError: qwüdpkqwdkpokqwpdk is not defined
-    at file:///C:/Users/basic/projects/BEAM/mongodb-project/server/index.js:9:1
-    at ModuleJob.run (node:internal/modules/esm/module_job:197:25)
-    at async Promise.all (index 0)
-    at async ESMLoader.import (node:internal/modules/esm/loader:337:24)
-    at async loadESM (node:internal/process/esm_loader:88:5)
-    at async handleMainPromise (node:internal/modules/run_main:61:12)
-[nodemon] app crashed - waiting for file changes before starting...`,
+    title: String,
+    content: String,
+    shortId: String,
   },
   {
-    id: "6F79257C",
-    title: "untitled",
-    createdAt: Date.now(),
-    modifiedAt: Date.now(),
-    content: `console.log(3791827398d7qwe98d7wq9d)
-    ^^^^^^^^^^
+    timestamps: true,
+  }
+);
 
-SyntaxError: Invalid or unexpected token
-at ESMLoader.moduleStrategy (node:internal/modules/esm/translators:115:18)
-at ESMLoader.moduleProvider (node:internal/modules/esm/loader:289:14)
-at async link (node:internal/modules/esm/module_job:70:21)
-[nodemon] app crashed - waiting for file changes before starting...
-`,
-  },
-];
+const Snippet = conn.model("snippet", SnippetSchema);
+
+// EXPRESS API
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-app.get("/", function (request, response) {
-  console.log("request received at /");
-  response.send("hello!");
+app.get("/snippets", async function (request, response) {
+  const snips = await Snippet.find({});
+  response.send(snips);
 });
 
-app.get("/snippets", function (request, response) {
-  response.send(db);
-});
+app.get("/snippets/:shortId", async function (request, response) {
+  const { shortId } = request.params;
 
-app.get("/snippets/:id", function (request, response) {
-  const { id } = request.params;
-  const foundDocument = db.find((item) => item.id === id);
+  // with mongo async await
+
+  const foundDocument = await Snippet.findOne({ shortId: shortId });
   if (foundDocument) {
     response.send(foundDocument);
   } else {
@@ -57,30 +44,27 @@ app.get("/snippets/:id", function (request, response) {
   }
 });
 
-app.post("/snippets", function (request, response) {
+app.post("/snippets", async function (request, response) {
   // request.body = json content of a POST request
 
-  console.log(request.body);
   // 1) get content
   // 2) saveit in the db
   const newDocument = {
-    createdAt: Date.now(),
-    modifiedAt: Date.now(),
+    shortId: nanoid(8),
     title: request.body.title,
     content: request.body.content,
-    id: nanoid(8),
   };
 
-  db.push(newDocument);
+  const createdSnippet = await Snippet.create(newDocument);
 
-  response.send(newDocument);
+  response.send(createdSnippet);
 });
 
-app.delete("/snippets/:id", function (request, response) {
-  const { id } = request.params;
-  const foundDocument = db.find((item) => item.id === id);
-  if (foundDocument) {
-    db.splice(db.indexOf(foundDocument), 1);
+app.delete("/snippets/:shortId", async function (request, response) {
+  const { shortId } = request.params;
+
+  const deletedSnippet = await Snippet.deleteOne({ shortId: shortId });
+  if (deletedSnippet.deletedCount > 0) {
     response.send("snippet deleted successfully");
   } else {
     response.status(404).send("snippet not found");
@@ -91,17 +75,15 @@ app.delete("/snippets/:id", function (request, response) {
 // update it with the new content
 // send back to the client the updated document
 
-app.put("/snippets/:id", function (request, response) {
-  const { id } = request.params;
-  const foundDocument = db.find((item) => item.id === id);
-  if (foundDocument) {
-    db[db.indexOf(foundDocument)].content = request.body.content;
-    db[db.indexOf(foundDocument)].content = request.body.title;
-    db[db.indexOf(foundDocument)].modifiedAt = Date.now();
-    response.send(db[db.indexOf(foundDocument)]);
-  } else {
-    response.status(404).send("snippet not found");
-  }
+app.put("/snippets/:shortId", async function (request, response) {
+  const { shortId } = request.params;
+  const updatedSnippet = await Snippet.findOneAndUpdate(
+    { shortId: shortId },
+    { title: request.body.title, content: request.body.content },
+    { new: true }
+  );
+
+  response.send(updatedSnippet);
 });
 
 app.listen(9000, function () {

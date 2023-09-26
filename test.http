@@ -23,7 +23,7 @@ DELETE http://localhost:9000/snippets/DBCC2857
 
 
 ### PUT a single snippet
-PUT http://localhost:9000/snippets/DBCC2857
+PUT http://localhost:9000/snippets/PT3g4ZId
 content-type: application/json
 
 {
