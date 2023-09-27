@@ -23,8 +23,8 @@ const Snippet = conn.model("snippet", SnippetSchema);
 // EXPRESS API
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 app.get("/snippets", async function (request, response) {
   const snips = await Snippet.find({});
@@ -86,8 +86,8 @@ app.put("/snippets/:shortId", async function (request, response) {
   response.send(updatedSnippet);
 });
 
-app.listen(9000, function () {
-  console.log("listening on http://localhost:9000");
+app.listen(process.env.PORT, function () {
+  console.log("listening on http://localhost:9000" + process.env.PORT);
 });
 
 // // HTTP VERBS
